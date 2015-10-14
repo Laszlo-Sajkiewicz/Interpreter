@@ -134,14 +134,15 @@ public:
     
 };
 class NoeudInstLire : public Noeud {
-    //<instLire> ::= lire ( <variable> { , <variable> } )
-public:
-    NoeudInstLire();
-    ~NoeudInstLire();
-    int executer();
-    
-private:
-    
+     //<instLire> ::= lire ( <variable> { , <variable> } )
+    public : 
+        NoeudInstLire();
+        ~NoeudInstLire() {}
+        void ajoute(Noeud* param);
+        int executer();
+        
+    private :
+        vector<Noeud*>  m_params;
 };
 class NoeudFacteur : public Noeud {
     // <facteur> ::= <entier>  |  <variable>  |  - <facteur>  | non <facteur> | ( <expression> )
