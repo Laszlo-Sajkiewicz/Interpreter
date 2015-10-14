@@ -1,3 +1,4 @@
+
 #include <stdlib.h>
 #include "ArbreAbstrait.h"
 #include "Symbole.h"
@@ -67,7 +68,6 @@ void NoeudSeqInst::ajoute(Noeud * instruction) {
         }
         return valeur; // On retourne la valeur calculée
     }
-
     ////////////////////////////////////////////////////////////////////////////////
     // NoeudInstSi
     ////////////////////////////////////////////////////////////////////////////////
@@ -80,9 +80,17 @@ void NoeudSeqInst::ajoute(Noeud * instruction) {
         if (m_condition->executer()) m_sequence->executer();
         return 0; 
     }
-    ////////////////////////////////////////////////////////////////////////////////
-    // NoeudInstPour
-    ////////////////////////////////////////////////////////////////////////////////
+
+    NoeudInstTantQue::NoeudInstTantQue(Noeud* condition, Noeud * sequence)
+            : m_condition(condition), m_sequence(sequence) {
+    }
+
+    int NoeudInstTantQue::executer() {
+        while (m_condition->executer()) {
+            m_sequence->executer();
+        }
+        return 0;
+    }
 
     NoeudInstPour::NoeudInstPour(Noeud* initialisation, Noeud* condition, Noeud* incrementation, Noeud * sequence)
             : m_condition(condition), m_incrementation(incrementation), m_initialisation(initialisation), m_sequence(sequence) {
@@ -93,6 +101,7 @@ void NoeudSeqInst::ajoute(Noeud * instruction) {
             m_sequence->executer();
         }
     }
+
     ////////////////////////////////////////////////////////////////////////////////
     // NoeudInstRepeter
     ////////////////////////////////////////////////////////////////////////////////
@@ -102,7 +111,54 @@ void NoeudSeqInst::ajoute(Noeud * instruction) {
     }
 
     int NoeudInstRepeter::executer() {
-        do 
+        do
             m_sequence->executer(); while (m_condition->executer());
+        return 0; // La valeur renvoyée ne représente rien !
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////
+    // NoeudInstEcrire
+    ////////////////////////////////////////////////////////////////////////////////
+
+    NoeudInstEcrire::NoeudInstEcrire()
+            : m_params() {
+    }
+
+    void NoeudInstEcrire::ajoute(Noeud * param) {
+        m_params.push_back(param);
+    }
+
+    int NoeudInstEcrire::executer() {
+        for (Noeud* p : m_params) {
+            // on regarde si l’objet pointé par p est de type SymbolValue et si c’est une chaîne
+            if (typeid (*p) == typeid (SymboleValue) && *((SymboleValue*) p) == "<CHAINE>") {
+                std::cout << ((SymboleValue*) p)->getChaine();
+            } else {
+                std::cout << p->executer();
+            }
+        }
+
+        return 0;
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////
+    // NoeudInstLire
+    ////////////////////////////////////////////////////////////////////////////////
+
+    NoeudInstLire::NoeudInstLire()
+            : m_params() {
+    }
+
+    void NoeudInstLire::ajoute(Noeud * param) {
+        m_params.push_back(param);
+    }
+
+    int NoeudInstLire::executer() {
+        for (Noeud* p : m_params) {
+            int val;
+            std::cin >> val;
+            ((SymboleValue*) p)->setValeur(val);
+        }
+
         return 0;
     }
