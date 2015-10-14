@@ -56,7 +56,13 @@ Noeud* Interpreteur::seqInst() {
     NoeudSeqInst* sequence = new NoeudSeqInst();
     do {
         sequence->ajoute(inst());
-    } while (m_lecteur.getSymbole() == "<VARIABLE>" || m_lecteur.getSymbole() == "si");
+    } while (m_lecteur.getSymbole() == "<VARIABLE>" ||
+            m_lecteur.getSymbole() == "si" ||
+            m_lecteur.getSymbole() == "repeter" ||
+            m_lecteur.getSymbole() == "tantque" ||
+            m_lecteur.getSymbole() == "ecrire" ||
+            m_lecteur.getSymbole() == "pour" ||
+            m_lecteur.getSymbole() == "lire");
     // Tant que le symbole courant est un début possible d'instruction...
     // Il faut compléter cette condition chaque fois qu'on rajoute une nouvelle instruction
     return sequence;
@@ -70,7 +76,24 @@ Noeud* Interpreteur::inst() {
         return affect;
     } else if (m_lecteur.getSymbole() == "si")
         return instSi();
-        // Compléter les alternatives chaque fois qu'on rajoute une nouvelle instruction
+    else if (m_lecteur.getSymbole() == "repeter"){
+        Noeud*rep = instRepeter();
+        testerEtAvancer(";");
+        return rep;
+    }
+    else if (m_lecteur.getSymbole() == "tantque") 
+        return instTantQue();
+    else if (m_lecteur.getSymbole() == "ecrire") {
+        Noeud* ecr = instEcrire();
+        testerEtAvancer(";");
+        return ecr;
+    } else if (m_lecteur.getSymbole() == "pour")
+        return instPour();
+    else if (m_lecteur.getSymbole() == "lire") {
+        Noeud* lit = instLire();
+        testerEtAvancer(";");
+        return lit;
+    }
     else erreur("Instruction incorrecte");
 }
 
@@ -150,11 +173,11 @@ Noeud* Interpreteur::instTantQue() {
 Noeud* Interpreteur::instRepeter() {
     //<instRepeter> ::= repeter ( <seqInst> ) jusqua ( <expression> )
     testerEtAvancer("repeter");
-    testerEtAvancer("(");
     Noeud* sequence = seqInst(); // on memorise la sequence d'instruction
     testerEtAvancer("jusqua");
-    instruction
-    Noeud* expression = expression(); //on memorise l'expression du jusqua
+    testerEtAvancer("(");
+    Noeud* condition = expression(); //on memorise l'expression du jusqua
+    testerEtAvancer(")");
     return new NoeudInstRepeter(sequence, condition);
 }
 
@@ -178,39 +201,45 @@ Noeud* Interpreteur::instPour() {
 }
 
 Noeud* Interpreteur::instEcrire() {
-    //<instEcrire> ::= ecrire ( <expression> | <chaine> { , <expression> | <chaine> } 
-    Noeud * param;
-    NoeudInstEcrire * ne = new NoeudInstEcrire;
+    // <instEcrire>  ::= ecrire( <expression> | <chaine> {, <expression> | <chaine> })
     testerEtAvancer("ecrire");
+    testerEtAvancer("(");
+    NoeudInstEcrire* ne = new NoeudInstEcrire();
+    Noeud* param = nullptr;
     if (m_lecteur.getSymbole() == "<CHAINE>") {
-        param = m_table.chercheAjoute(m_lecteur.getSymbole()); // on ajoute la chaine à la table
+        param = m_table.chercheAjoute(m_lecteur.getSymbole());
+        ne->ajoute(param);
         m_lecteur.avancer();
-    } else
+    } else {
         param = expression();
-    ne->ajouter(param);
+        ne->ajoute(param);
+    }
     while (m_lecteur.getSymbole() == ",") {
         m_lecteur.avancer();
         if (m_lecteur.getSymbole() == "<CHAINE>") {
-            param = m_table.chercheAjoute(m_lecteur.getSymbole()); // on ajoute la chaine à la table
+            param = m_table.chercheAjoute(m_lecteur.getSymbole());
+            ne->ajoute(param);
             m_lecteur.avancer();
-        } else
+        } else {
             param = expression();
-        ne->ajouter(param);
+            ne->ajoute(param);
+        }
     }
+    testerEtAvancer(")");
     return ne;
 }
 
 Noeud* Interpreteur::instLire() {
     //<instLire> ::= lire ( <variable> { , <variable> } )
     Noeud* param;
-    Noeud* nl;
+    Noeud* ne = new NoeudInstEcrire;
     testerEtAvancer("lire");
     testerEtAvancer("(");
-    if (m_lecteur.getSymbole() = "<VARIABLE>") {
+    if (m_lecteur.getSymbole() == "<VARIABLE>") {
         param = m_table.chercheAjoute(m_lecteur.getSymbole()); // on ajoute la variable à la table
         m_lecteur.avancer();
     }
-    nl->ajoute(param);
+    ne->ajoute(param);
     while (m_lecteur.getSymbole() == ",") {
         m_lecteur.avancer();
         if (m_lecteur.getSymbole() == "<VARIABLE>") {
@@ -218,9 +247,9 @@ Noeud* Interpreteur::instLire() {
             m_lecteur.avancer();
         } else
 
-            ne->ajouter(param);
+            ne->ajoute(param);
     }
     testerEtAvancer(")");
-    return nl;
+    return ne;
 }
 
