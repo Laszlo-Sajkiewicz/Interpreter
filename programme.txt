@@ -5,6 +5,24 @@ procedure principale()
   si (i>14)
     j=1;
   finsi
-ecrire("i=",i);
+
+ecrire("i =",i);
+
+    b = 5;
+
+      repeter 
+        j = j+1; 
+    jusqua (j<5);
+    ecrire ("j =",j);
+lire(i);
+    
+    
+
+    tantque( b < 10 )
+      ecrire("b=",b);
+        b=b+1;
+fintantque
+
+
 finproc
 # Commentaire Final
