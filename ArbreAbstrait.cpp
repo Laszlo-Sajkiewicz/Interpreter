@@ -7,7 +7,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 // NoeudSeqInst
 ////////////////////////////////////////////////////////////////////////////////
- 
+
 NoeudSeqInst::NoeudSeqInst() : m_instructions() {
 }
 
@@ -71,14 +71,53 @@ int NoeudOperateurBinaire::executer() {
 // NoeudInstSi
 ////////////////////////////////////////////////////////////////////////////////
 
-NoeudInstSi::NoeudInstSi(Noeud* condition, Noeud * sequence)
-: m_condition(condition), m_sequence(sequence) {
+NoeudInstSi::NoeudInstSi(Noeud* condition, Noeud* sequence)
+: m_condition(condition), m_sequence(sequence), m_conditionsSsi(), m_sequencesSsi(), m_sequenceSinon() {
 }
 
-int NoeudInstSi::executer() {
-    if (m_condition->executer()) m_sequence->executer();
-    return 0;
+/**
+ * Fonction qui ajoute une condition au tableau des conditions
+ * @param cond est une référence à une condition
+ */
+void NoeudInstSi::ajouterConditionSsi(Noeud* cond) {
+    m_conditionsSsi.push_back(cond);
 }
+
+/**
+ * Fonction qui ajoute une sequence au tableau de séquences
+ * @param seq est une référence à une sequence
+ */
+void NoeudInstSi::ajouterSequenceSsi(Noeud* seq) {
+    m_sequencesSsi.push_back(seq);
+}
+
+void NoeudInstSi::ajouterSequenceSinon(Noeud* seq) {
+    m_sequenceSinon = seq;
+}
+int NoeudInstSi::executer() {
+    int i=0;
+    bool pass = false;
+    if (m_condition->executer()) {
+        m_sequence->executer();
+        pass=true;
+    }
+ 
+    if (m_conditionsSsi.size() > 0 && m_sequencesSsi.size() <= m_conditionsSsi.size()){
+        for(Noeud* p : m_conditionsSsi){
+            if (p->executer()) {
+                m_sequencesSsi[i]->executer(); 
+                pass=true;
+            }
+        }
+    }
+    if (m_sequenceSinon != nullptr){
+        if(!pass) {
+            m_sequenceSinon->executer();
+        }
+    }
+    return 0; 
+}
+
 
 NoeudInstTantQue::NoeudInstTantQue(Noeud* condition, Noeud * sequence)
 : m_condition(condition), m_sequence(sequence) {
