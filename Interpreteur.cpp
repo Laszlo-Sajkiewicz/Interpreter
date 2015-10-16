@@ -4,7 +4,7 @@
 using namespace std;
 
 Interpreteur::Interpreteur(ifstream & fichier) :
-m_lecteur(fichier), m_table(), m_arbre(nullptr) {
+m_lecteur(fichier), m_table(), m_arbre(nullptr), nb_erreurs(0) {
 }
 
 void Interpreteur::analyse() {
@@ -39,15 +39,77 @@ void Interpreteur::erreur(const string & message) const throw (SyntaxeException)
     throw SyntaxeException(messageWhat);
 }
 
+
 Noeud* Interpreteur::programme() {
     // <programme> ::= procedure principale() <seqInst> finproc FIN_FICHIER
-    testerEtAvancer("procedure");
-    testerEtAvancer("principale");
-    testerEtAvancer("(");
-    testerEtAvancer(")");
-    Noeud* sequence = seqInst();
-    testerEtAvancer("finproc");
-    tester("<FINDEFICHIER>");
+    Noeud* sequence = nullptr;
+    try {
+        testerEtAvancer("procedure");
+    }
+    catch (SyntaxeException & e) {
+        this->nb_erreurs++;
+        cout << "Erreur" << nb_erreurs << e.what() << endl;
+        m_lecteur.avancer();
+    }
+    
+    try {
+        testerEtAvancer("principale");
+    }
+    catch (SyntaxeException & e) {
+        this->nb_erreurs++;
+        cout << "Erreur" << nb_erreurs << e.what() << endl;
+        m_lecteur.avancer();
+    }
+    
+    try {
+        testerEtAvancer("(");
+    }
+    catch (SyntaxeException & e) {
+        this->nb_erreurs++;
+        cout << "Erreur" << nb_erreurs << e.what() << endl;
+        m_lecteur.avancer();
+    }
+    
+    try {
+       testerEtAvancer(")"); 
+    }
+    catch (SyntaxeException & e) {
+        this->nb_erreurs++;
+        cout << "Erreur" << nb_erreurs << e.what() << endl;
+        m_lecteur.avancer();
+    }
+    
+    try {
+        sequence = seqInst();
+    }
+    catch (SyntaxeException & e) {
+        this->nb_erreurs++;
+        cout << "Erreur" << nb_erreurs << e.what() << endl;
+        m_lecteur.avancer();
+    }
+
+    
+    try {
+        testerEtAvancer("finproc");
+    }
+    catch (SyntaxeException & e) {
+        this->nb_erreurs++;
+        cout << "Erreur" << nb_erreurs << e.what() << endl;
+        m_lecteur.avancer();
+    }
+    
+    try {
+        tester("<FINDEFICHIER>");
+    }
+    catch (SyntaxeException & e) {
+        this->nb_erreurs++;
+        cout << "Erreur" << nb_erreurs << e.what() << endl;
+        m_lecteur.avancer();
+    }
+
+    if (nb_erreurs>0) {
+        sequence = nullptr;
+    }
     return sequence;
 }
 
@@ -148,17 +210,68 @@ Noeud* Interpreteur::facteur() {
     return fact;
 }
 
-Noeud* Interpreteur::instSi() {
-    // <instSi> ::= si ( <expression> ) <seqInst> finsi
-    testerEtAvancer("si");
-    testerEtAvancer("(");
-    Noeud* condition = expression(); // On mémorise la condition
-    testerEtAvancer(")");
-    Noeud* sequence = seqInst(); // On mémorise la séquence d'instruction
-    testerEtAvancer("finsi");
-    return new NoeudInstSi(condition, sequence); // Et on renvoie un noeud Instruction Si
-}
 
+
+Noeud* Interpreteur::instSi() {
+    // <instSi> ::= si ( <expression> ) <seqInst> finsi | sinonsi (expression)
+    try {
+        testerEtAvancer("si");
+    }    catch (SyntaxeException& e) {
+        cout << "erreur : " << nb_erreurs << " " << e.what() << endl;
+        nb_erreurs++;
+        m_lecteur.avancer();
+    }
+
+    try {
+        testerEtAvancer("(");
+    }    catch (SyntaxeException& e) {
+        cout << "erreur : " << nb_erreurs << " " << e.what() << endl;
+        nb_erreurs++;
+        m_lecteur.avancer();
+    }
+
+    Noeud* condition = expression(); // On mémorise la condition
+    try {
+        testerEtAvancer(")");
+    }    catch (SyntaxeException& e) {
+        cout << "erreur : " << nb_erreurs << " " << e.what() << endl;
+        nb_erreurs++;
+        m_lecteur.avancer();
+    }
+    Noeud* sequence = seqInst(); // On mémorise la séquence d'instruction
+    NoeudInstSi* instSi = new NoeudInstSi(condition, sequence);
+
+
+    while (m_lecteur.getSymbole() == "sinonsi") {
+        m_lecteur.avancer();
+        try {
+            testerEtAvancer("(");
+        }        catch (SyntaxeException& e) {
+            nb_erreurs++;
+            m_lecteur.avancer();
+        }
+        instSi->ajouterConditionSsi(expression());
+        try {
+            testerEtAvancer(")");
+        }        catch (SyntaxeException& e) {
+            nb_erreurs++;
+            m_lecteur.avancer();
+        }
+        instSi->ajouterSequenceSsi(seqInst());
+    }
+
+    if (m_lecteur.getSymbole() == "sinon") {
+        m_lecteur.avancer();
+        instSi->ajouterSequenceSinon(seqInst());
+    }
+    try {
+        testerEtAvancer("finsi");
+    }    catch (SyntaxeException& e) {
+        nb_erreurs++;
+        m_lecteur.avancer();
+    }
+    return instSi; // Et on renvoie un noeud Instruction Si
+}
 Noeud* Interpreteur::instTantQue() {
     //<instTantQue> ::= tantque ( <expression> ) <seqInst> fintantque
     testerEtAvancer("tantque");
@@ -171,14 +284,38 @@ Noeud* Interpreteur::instTantQue() {
 }
 
 Noeud* Interpreteur::instRepeter() {
-    //<instRepeter> ::= repeter ( <seqInst> ) jusqua ( <expression> )
-    testerEtAvancer("repeter");
-    Noeud* sequence = seqInst(); // on memorise la sequence d'instruction
-    testerEtAvancer("jusqua");
-    testerEtAvancer("(");
-    Noeud* condition = expression(); //on memorise l'expression du jusqua
-    testerEtAvancer(")");
-    return new NoeudInstRepeter(sequence, condition);
+    // <instRepeter> ::=repeter <seqInst> jusqua( <expression> )
+    try {
+        testerEtAvancer("repeter");
+    } catch (SyntaxeException & e) {
+        cout << e.what() << endl;
+        nb_erreurs++;
+        m_lecteur.avancer();
+    }
+    Noeud* sequence = seqInst(); // On mémorise la séquence d'instruction
+    try {
+        testerEtAvancer("jusqua");
+    } catch (SyntaxeException & e) {
+        cout << e.what() << endl;
+        nb_erreurs++;
+        m_lecteur.avancer();
+    }
+    try {
+        testerEtAvancer("(");
+    } catch (SyntaxeException & e) {
+        cout << e.what() << endl;
+        nb_erreurs++;
+        m_lecteur.avancer();
+    }
+    Noeud* condition = expression(); // On mémorise la condition
+    try {
+        testerEtAvancer(")");
+    } catch (SyntaxeException & e) {
+        cout << e.what() << endl;
+        nb_erreurs++;
+        m_lecteur.avancer();
+    }
+    return new NoeudInstRepeter(sequence, condition); // Et on renvoie un noeud Instruction Si
 }
 
 Noeud* Interpreteur::instPour() {
@@ -202,10 +339,23 @@ Noeud* Interpreteur::instPour() {
 
 Noeud* Interpreteur::instEcrire() {
     // <instEcrire>  ::= ecrire( <expression> | <chaine> {, <expression> | <chaine> })
-    testerEtAvancer("ecrire");
-    testerEtAvancer("(");
+     try {
+        testerEtAvancer("ecrire");
+    } catch (SyntaxeException & e) {
+        cout << e.what() << endl;
+        nb_erreurs++;
+        m_lecteur.avancer();
+    }
+    try {
+        testerEtAvancer("(");
+    } catch (SyntaxeException & e) {
+        cout << e.what() << endl;
+        nb_erreurs++;
+        m_lecteur.avancer();
+    }
+    
     NoeudInstEcrire* ne = new NoeudInstEcrire();
-    Noeud* param = nullptr;
+    Noeud* param = nullptr;   
     if (m_lecteur.getSymbole() == "<CHAINE>") {
         param = m_table.chercheAjoute(m_lecteur.getSymbole());
         ne->ajoute(param);
@@ -231,10 +381,25 @@ Noeud* Interpreteur::instEcrire() {
 
 Noeud* Interpreteur::instLire() {
     //<instLire> ::= lire ( <variable> { , <variable> } )
+     try {
+        testerEtAvancer("lire");
+    } catch (SyntaxeException & e) {
+        cout << e.what() << endl;
+        nb_erreurs++;
+        m_lecteur.avancer();
+    }
+    try {
+        testerEtAvancer("(");
+    } catch (SyntaxeException & e) {
+        cout << e.what() << endl;
+        nb_erreurs++;
+        m_lecteur.avancer();
+    }
+     
+     
     Noeud* param;
-    Noeud* ne = new NoeudInstEcrire;
-    testerEtAvancer("lire");
-    testerEtAvancer("(");
+    Noeud* ne = new NoeudInstLire;
+
     if (m_lecteur.getSymbole() == "<VARIABLE>") {
         param = m_table.chercheAjoute(m_lecteur.getSymbole()); // on ajoute la variable à la table
         m_lecteur.avancer();
