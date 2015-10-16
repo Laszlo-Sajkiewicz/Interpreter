@@ -75,10 +75,16 @@ class NoeudInstSi : public Noeud {
      // Construit une "instruction si" avec sa condition et sa séquence d'instruction
    ~NoeudInstSi() {} // A cause du destructeur virtuel de la classe Noeud
     int executer();  // Exécute l'instruction si : si condition vraie on exécute la séquence
+    void ajouterConditionSsi(Noeud* cond);
+    void ajouterSequenceSsi(Noeud* seq);
+    void ajouterSequenceSinon(Noeud* seq);
 
   private:
     Noeud*  m_condition;
     Noeud*  m_sequence;
+    Noeud*  m_sequenceSinon;
+    vector<Noeud*> m_conditionsSsi;
+    vector<Noeud*> m_sequencesSsi;
 };
 
 class NoeudInstTantQue : public Noeud {
@@ -112,7 +118,7 @@ class NoeudInstPour : public Noeud {
 public: 
     // <instPour> ::= pour ( [ <affectation> ] ; <expression> ; [ <affectation> ]) <seqInst> finpour
     NoeudInstPour(Noeud* affectation,Noeud* expression,Noeud* affectation2,Noeud* sequence);
-    ~NoeudInstPour();
+    ~NoeudInstPour(){}
     int executer();
 private :
     Noeud* m_affectation;
@@ -144,6 +150,7 @@ class NoeudInstLire : public Noeud {
     private :
         vector<Noeud*>  m_params;
 };
+
 class NoeudFacteur : public Noeud {
     // <facteur> ::= <entier>  |  <variable>  |  - <facteur>  | non <facteur> | ( <expression> )
 public:
