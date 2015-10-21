@@ -1,0 +1,13 @@
+# Fichier de test
+# Les lignes de commentaires commencent par #
+procedure principale() 
+
+    tantque( b < 10 )
+      ecrire("b=",b);
+        b=b+1;
+fintantque
+
+ecrire( "execution du tant que ");
+finproc
+# Commentaire Final
+ 
