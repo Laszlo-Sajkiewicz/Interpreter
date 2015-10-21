@@ -1,0 +1,12 @@
+# Fichier de test
+# Les lignes de commentaires commencent par #
+procedure principale() 
+    j=1;
+    repeter 
+        j = j+1; 
+        ecrire("j=" ,j);
+    jusqua (j<5);
+    ecrire("Entrez la valeur de j : ");
+    lire(j);
+finproc
+# Commentaire Final
